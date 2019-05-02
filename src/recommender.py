@@ -14,14 +14,13 @@ class MovieRecommender():
     def fill_ratings_mat(self, i, row):
         self.ratings_mat[row['user'], row['movie']] = row['rating']
 
-    def fit(self, ratings):
+    def fit(self, ratings_mat):
         """
         Trains the recommender on a given set of ratings.
 
         Parameters
         ----------
-        ratings : pandas dataframe, shape = (n_ratings, 4)
-                  with columns 'user', 'movie', 'rating', 'timestamp'
+        ratings_mat : nxd array, n = max id of any user, d = max id of any movie
 
         Returns
         -------
@@ -29,21 +28,21 @@ class MovieRecommender():
             Returns self.
         """
         self.logger.debug("starting fit")
-        self.n = ratings.max()['user']+1
-        self.p = ratings.max()['movie']+1
+        # self.n = ratings.max()['user']+1
+        # self.p = ratings.max()['movie']+1
+        self.ratings_mat = ratings_mat
+        self.k = ratings_mat.shape[0]//20
 
-        self.k = self.n//20
+        #ratings_array = ratings[ratings.columns[:-1].values].values
 
-        ratings_array = ratings[ratings.columns[:-1].values].values
+        #self.ratings_mat = np.zeros((self.n, self.p))
 
-        self.ratings_mat = np.zeros((self.n, self.p))
+        #for i, rating in ratings.iterrows():
+        #    self.ratings_mat[( rating['user'], rating['movie'] )] = rating['rating']
 
-        for i, rating in ratings.iterrows():
-            self.ratings_mat[( rating['user'], rating['movie'] )] = rating['rating']
+        self.cosine_dists = squareform(pdist(ratings_mat, 'cosine'))
 
-        self.cosine_dists = squareform(pdist(self.ratings_mat, 'cosine'))
-
-        #nans result if a user has no ratings data. In this case, we assume they are as different as possible, since we cannot predict using those users anyways
+        #if a user has no ratings data, cosine dist will return a nan. In this case, we assume they are as different as possible, since we cannot predict using those users anyways
         self.cosine_dists = 1 - np.nan_to_num(1 - self.cosine_dists)
 
         self.similarity_ranks = self.cosine_dists.argsort(axis = 1)
@@ -95,11 +94,6 @@ class MovieRecommender():
 
         requests['rating'] = preds
         return requests
-
-        #requests['rating'] = np.random.choice(range(1, 5), requests.shape[0])
-
-        self.logger.debug("finishing predict")
-        return(requests)
 
 
 if __name__ == "__main__":
